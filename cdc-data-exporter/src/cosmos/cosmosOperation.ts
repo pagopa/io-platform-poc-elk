@@ -11,6 +11,7 @@ import * as E from "fp-ts/Either";
 import * as O from "fp-ts/Option";
 import * as TE from "fp-ts/TaskEither";
 import { pipe } from "fp-ts/lib/function";
+import * as T from "fp-ts/lib/Task";
 import { ContinuationTokenItem } from "../index";
 
 export const generateRandomString = () =>
@@ -61,26 +62,6 @@ export const createContainerIfNotExists = (
         new Error(`Impossible to create container: " ${String(reason)}`)
     ),
     TE.map((response) => response.container)
-  );
-
-export const createItem = (
-  container: Container,
-  _: string,
-  __: string
-): TE.TaskEither<Error, void> =>
-  TE.tryCatch(
-    async () => {
-      // eslint-disable-next-line functional/no-let
-      for (let i = 0; i < 1000; i++) {
-        await container.items.create({
-          id: generateRandomString(),
-          pk: generateRandomString(),
-        });
-      }
-
-      return void 0;
-    },
-    (reason) => new Error(`Impossible to create container: " ${String(reason)}`)
   );
 
 export const getItemFromContainerById = (
@@ -142,6 +123,7 @@ export const getChangeFeed = (
             console.log("Result found", result.result);
           }
         }
+        await T.delay(1000)(T.of(void 0))();
       }
     },
     (reason) =>

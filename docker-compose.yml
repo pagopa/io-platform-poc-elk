@@ -9,14 +9,16 @@ services:
     tty: true
     mem_limit: 12GB
     cpu_count: 6
+    networks:
+       - poc-be
     ports:
-      - ${COSMOSDB_PORT}:3000
+      - 8082:8081
       - 10251:10251
       - 10252:10252
       - 10253:10253
       - 10254:10254
     expose:
-      - "3000"
+      - "8082"
       - "10251-10255"
     environment:
       - AZURE_COSMOS_EMULATOR_PARTITION_COUNT=10

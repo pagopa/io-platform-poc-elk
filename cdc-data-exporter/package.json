@@ -8,7 +8,7 @@
     "format": "prettier --write .",
     "lint": "eslint \"src/**\"",
     "lint:fix": "eslint --fix \"src/**\"",
-    "start": "ts-node -r dotenv/config ./index.ts",
+    "start": "ts-node -r dotenv/config src/index.ts",
     "build": "tsc"
   },
   "devDependencies": {

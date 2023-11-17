@@ -1,2 +1,15 @@
 cdc-data-exporter/node_modules
+cdc-data-exporter/.env
+load-test/node_modules
+load-test/.env
+load-test/dist
+load-test/generated
+load-test/typescript
+load-test/yarn-error.log
+data-importer/node_modules
+data-importer/.env
+data-importer/dist
+data-importer/generated
+data-importer/typescript
+data-importer/yarn-error.log
 .vscode
