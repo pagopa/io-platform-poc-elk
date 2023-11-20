@@ -10,18 +10,22 @@ import {
   createDatabaseIfNotExists,
   getChangeFeed,
   getItemFromContainerById,
-} from "./cosmos/cosmosOperation";
+} from "./utils/cosmosOperation";
+import { cdcToElasticHandler } from "./handlers/indices";
+import { getElasticClient } from "./utils/elastic";
 
 dotenv.config();
 useWinston(withConsole());
 
-export const COSMOS_CONFIG = {
-  ENDPOINT: process.env.COSMOS_ENDPOINT,
-  KEY: process.env.COSMOS_KEY,
+export const CONFIG = {
+  COSMOS_ENDPOINT: process.env.COSMOS_ENDPOINT,
+  COSMOS_KEY: process.env.COSMOS_KEY,
+  ELASTIC_NODE: process.env.ELASTIC_NODE,
 };
 
 const DATABASE = "ChangeFeedDB";
 const CONTAINER = "ChangeFeedCN";
+const ELASTIC_INDEX_NAME = "test";
 export interface ContinuationTokenItem {
   readonly id: string;
   readonly lease: string;
@@ -32,7 +36,7 @@ const main = () =>
     TE.Do,
     defaultLog.taskEither.info("Creating cosmos client..."),
     TE.bind("client", () =>
-      cosmosConnect(COSMOS_CONFIG.ENDPOINT, COSMOS_CONFIG.KEY)
+      cosmosConnect(CONFIG.COSMOS_ENDPOINT, CONFIG.COSMOS_KEY)
     ),
     defaultLog.taskEither.info("Client created"),
     defaultLog.taskEither.info("Creating Database if not exists..."),
@@ -62,9 +66,27 @@ const main = () =>
       )
     ),
     defaultLog.taskEither.info("Continuation Token evaluated"),
+    TE.bind(
+      "changeFeedProcessor",
+      ({ container, leaseContainer, continuationToken }) =>
+        TE.of(
+          getChangeFeed(
+            container,
+            leaseContainer,
+            O.toNullable(continuationToken)
+          )
+        )
+    ),
     defaultLog.taskEither.info("Getting change feed from database..."),
-    TE.chain(({ container, leaseContainer, continuationToken }) =>
-      getChangeFeed(container, leaseContainer, O.toNullable(continuationToken))
+    TE.chain(({ changeFeedProcessor }) =>
+      pipe(
+        getElasticClient(CONFIG.ELASTIC_NODE),
+        TE.chain((elasticClient) =>
+          changeFeedProcessor(
+            cdcToElasticHandler(elasticClient, ELASTIC_INDEX_NAME)
+          )
+        )
+      )
     ),
     defaultLog.taskEither.info("Change Feed consumed")
   )();

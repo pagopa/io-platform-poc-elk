@@ -45,7 +45,7 @@ export default function() {
       res => check(
         res,
         { "newDocument status was 200": (r) => r.status == 200 },
-        { tags: { api: "newDocument" } }
+        { tags: JSON.stringify({ api: "newDocument" }) }
       )
     )), 
     () => sleep(2)

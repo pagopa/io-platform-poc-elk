@@ -90,42 +90,55 @@ export const getItemFromContainerById = (
     TE.map((resp) => O.fromNullable(resp.resources[0]))
   );
 
-export const getChangeFeed = (
-  container: Container,
-  leaseContainer: Container,
-  continuationToken?: string
-): TE.TaskEither<Error, string> =>
-  TE.tryCatch(
-    async () => {
-      // eslint-disable-next-line functional/no-let
-      let changeFeedStartFrom = ChangeFeedStartFrom.Beginning();
-      if (continuationToken) {
-        changeFeedStartFrom =
-          ChangeFeedStartFrom.Continuation(continuationToken);
-      }
-      const changeFeedIteratorOptions: ChangeFeedIteratorOptions = {
-        maxItemCount: 1,
-        changeFeedStartFrom,
-      };
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        for await (const result of container.items
-          .getChangeFeedIterator(changeFeedIteratorOptions)
-          .getAsyncIterator()) {
-          await leaseContainer.items.upsert({
-            id: container.id.replace(" ", "-"),
-            lease: result.continuationToken,
-          });
-          if (result.statusCode === StatusCodes.NotModified) {
-            console.log("No new results ", result.continuationToken);
-            break;
-          } else {
-            console.log("Result found", result.result);
-          }
+export const getChangeFeed =
+  <T>(
+    container: Container,
+    leaseContainer: Container,
+    continuationToken?: string
+  ) =>
+  (
+    documentHandler: (dbDocument: T) => TE.TaskEither<Error, boolean>
+  ): TE.TaskEither<Error, string> =>
+    TE.tryCatch(
+      async () => {
+        // eslint-disable-next-line functional/no-let
+        let changeFeedStartFrom = ChangeFeedStartFrom.Beginning();
+        if (continuationToken) {
+          changeFeedStartFrom =
+            ChangeFeedStartFrom.Continuation(continuationToken);
         }
-        await T.delay(1000)(T.of(void 0))();
-      }
-    },
-    (reason) =>
-      new Error(`Impossible to get the change feed: " ${String(reason)}`)
-  );
+        const changeFeedIteratorOptions: ChangeFeedIteratorOptions = {
+          maxItemCount: 1,
+          changeFeedStartFrom,
+        };
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          for await (const result of container.items
+            .getChangeFeedIterator(changeFeedIteratorOptions)
+            .getAsyncIterator()) {
+            if (result.statusCode === StatusCodes.NotModified) {
+              console.log("No new results ", result.continuationToken);
+              break;
+            } else {
+              console.log("Result found", result.result);
+              await pipe(
+                documentHandler(result.result as T),
+                TE.chain(() =>
+                  TE.tryCatch(
+                    () =>
+                      leaseContainer.items.upsert({
+                        id: container.id.replace(" ", "-"),
+                        lease: result.continuationToken,
+                      }),
+                    E.toError
+                  )
+                )
+              )();
+            }
+          }
+          await T.delay(1000)(T.of(void 0))();
+        }
+      },
+      (reason) =>
+        new Error(`Impossible to get the change feed: " ${String(reason)}`)
+    );
