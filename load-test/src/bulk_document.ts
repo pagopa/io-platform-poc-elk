@@ -1,8 +1,6 @@
-import { check, fail, sleep } from "k6";
+import { check, sleep } from "k6";
 import http from "k6/http";
 import * as NAR from "fp-ts/lib/NonEmptyArray";
-import * as E from "fp-ts/lib/Either";
-import * as B from "fp-ts/lib/boolean";
 import { getConfigOrThrow } from "./utils/config";
 import { pipe } from "fp-ts/lib/function";
 import { generateDocument } from "./utils/generator";
@@ -21,7 +19,7 @@ export let options = {
   },
   thresholds: {
     http_req_duration: ["p(99)<1500"], // 99% of requests must complete below 1.5s
-    "http_req_duration{api:checkMessages}": ["p(95)<1000"],
+    "http_req_duration{api:newDocument}": ["p(95)<1000"],
   },
 };
 

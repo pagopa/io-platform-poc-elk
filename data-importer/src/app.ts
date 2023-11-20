@@ -26,7 +26,6 @@ export const createApp = async () => {
     })
   );
 
-  console.log(config.COSMOS_ENDPOINT, config.COSMOS_KEY, config.COSMOS_DATABASE, config.COSMOS_CONTAINER);
   const COSMOS_CONTAINER = await pipe(
     cosmosConnect(config.COSMOS_ENDPOINT, config.COSMOS_KEY),
     TE.chain((client) =>
