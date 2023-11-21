@@ -12,7 +12,7 @@ import {
   getItemFromContainerById,
 } from "./utils/cosmosOperation";
 import { cdcToElasticHandler } from "./handlers/indices";
-import { getElasticClient } from "./utils/elastic";
+import { createIndexIfNotExists, getElasticClient } from "./utils/elastic";
 
 dotenv.config();
 useWinston(withConsole());
@@ -81,7 +81,11 @@ const main = () =>
     TE.chain(({ changeFeedProcessor }) =>
       pipe(
         getElasticClient(CONFIG.ELASTIC_NODE),
-        TE.chain((elasticClient) =>
+        TE.bindTo("elasticClient"),
+        TE.bind("indexCreation", ({ elasticClient }) =>
+          createIndexIfNotExists(elasticClient, ELASTIC_INDEX_NAME)
+        ),
+        TE.chain(({ elasticClient }) =>
           changeFeedProcessor(
             cdcToElasticHandler(elasticClient, ELASTIC_INDEX_NAME)
           )

@@ -107,7 +107,8 @@ export const getChangeFeed =
           changeFeedStartFrom =
             ChangeFeedStartFrom.Continuation(continuationToken);
         }
-        const changeFeedIteratorOptions: ChangeFeedIteratorOptions = {
+        // eslint-disable-next-line functional/no-let
+        let changeFeedIteratorOptions: ChangeFeedIteratorOptions = {
           maxItemCount: 1,
           changeFeedStartFrom,
         };
@@ -134,6 +135,12 @@ export const getChangeFeed =
                   )
                 )
               )();
+              changeFeedIteratorOptions = {
+                maxItemCount: 1,
+                changeFeedStartFrom: ChangeFeedStartFrom.Continuation(
+                  result.continuationToken
+                ),
+              };
             }
           }
           await T.delay(1000)(T.of(void 0))();

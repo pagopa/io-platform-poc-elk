@@ -65,10 +65,10 @@ export const getAndIndexDocument = (
   pipe(
     TE.tryCatch(
       () => elasticClient.get({ index: indexName, id: document.id }),
-      E.toError
+      (e) => e as EL.errors.ResponseError
     ),
-    TE.map((getResponse) => getResponse.found),
-    TE.chain(
+    TE.orElseW((resErr) => TE.right(resErr.statusCode !== 404)),
+    TE.chainW(
       B.fold(
         () =>
           TE.tryCatch(
