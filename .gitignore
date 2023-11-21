@@ -1,4 +1,5 @@
 cdc-data-exporter/node_modules
+cdc-data-exporter/dist
 cdc-data-exporter/.env
 load-test/node_modules
 load-test/.env
