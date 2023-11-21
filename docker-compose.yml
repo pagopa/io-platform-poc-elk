@@ -37,6 +37,28 @@ services:
     networks:
        - poc-be
 
+  data-importer:
+    depends_on:
+      - cosmosdb
+    container_name: data-importer
+    restart: always
+    build:
+      context: ./data-importer
+      dockerfile: Dockerfile
+    environment:
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+    env_file:
+      - ./data-importer/.dockerenv
+    expose:
+      - "3000"
+    ports:
+      - "3000:3000"
+    command: ["yarn", "start"]
+    networks:
+      - poc-be
+    volumes:
+      - "./data-importer:/usr/src/app"
+
   es01:
     container_name: es01
     image: docker.elastic.co/elasticsearch/elasticsearch:${STACK_VERSION}
