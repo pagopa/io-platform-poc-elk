@@ -1,11 +1,13 @@
-import {
-  FiscalCode,
-} from "@pagopa/ts-commons/lib/strings";
+import { FiscalCode } from "@pagopa/ts-commons/lib/strings";
 
-
-export const randomString = (length: number, charset: string) => {
+export const randomString = (length: number, charset: string): string => {
+  // eslint-disable-next-line functional/no-let
   let res = "";
-  while (length--) res += charset[(Math.random() * charset.length) | 0];
+  // eslint-disable-next-line no-param-reassign
+  while (length--) {
+    // eslint-disable-next-line no-bitwise
+    res += charset[(Math.random() * charset.length) | 0];
+  }
   return res;
 };
 
@@ -17,10 +19,13 @@ export const generateFakeFiscalCode = (decade: string): FiscalCode => {
   ) as FiscalCode;
 };
 
-export const generateMessageId = () =>
+export const generateMessageId = (): string =>
   randomString(12, "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789");
 
-export const generateDocument = () => ({
-  id: generateMessageId(),
-  fiscalCode: generateFakeFiscalCode("8")
-})
+export const generateDocument = (): {
+  readonly fiscalCode: string;
+  readonly id: string;
+} => ({
+  fiscalCode: generateFakeFiscalCode("8"),
+  id: generateMessageId()
+});

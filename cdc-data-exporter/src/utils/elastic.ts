@@ -3,6 +3,7 @@ import * as TE from "fp-ts/TaskEither";
 import * as E from "fp-ts/Either";
 import * as B from "fp-ts/boolean";
 import { pipe } from "fp-ts/lib/function";
+import { defaultLog } from "@pagopa/winston-ts";
 
 export interface ElasticDocument {
   readonly id: string;
@@ -63,11 +64,18 @@ export const getAndIndexDocument = (
   document: ElasticDocument
 ) =>
   pipe(
-    TE.tryCatch(
-      () => elasticClient.get({ index: indexName, id: document.id }),
-      (e) => e as EL.errors.ResponseError
+    TE.Do,
+    defaultLog.taskEither.info(`getAndIndexDocument => ${document}`),
+    () =>
+      TE.tryCatch(
+        () => elasticClient.get({ index: indexName, id: document.id }),
+        (e) => e as EL.errors.ResponseError
+      ),
+    defaultLog.taskEither.infoLeft(
+      (e) => `Error getting document from index => ${String(e)}`
     ),
     TE.orElseW((resErr) => TE.right(resErr.statusCode !== 404)),
+    defaultLog.taskEither.info("indexing document"),
     TE.chainW(
       B.fold(
         () =>

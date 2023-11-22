@@ -8,11 +8,11 @@ import {
   cosmosConnect,
   createContainerIfNotExists,
   createDatabaseIfNotExists,
-  getChangeFeed,
   getItemFromContainerById,
 } from "./utils/cosmosOperation";
 import { cdcToElasticHandler } from "./handlers/indices";
 import { createIndexIfNotExists, getElasticClient } from "./utils/elastic";
+import { changeFeedHandler } from "./handlers/changeFeed";
 
 dotenv.config();
 useWinston(withConsole());
@@ -70,7 +70,7 @@ const main = () =>
       "changeFeedProcessor",
       ({ container, leaseContainer, continuationToken }) =>
         TE.of(
-          getChangeFeed(
+          changeFeedHandler(
             container,
             leaseContainer,
             O.toNullable(continuationToken)
