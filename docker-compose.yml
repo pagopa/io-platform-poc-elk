@@ -85,6 +85,7 @@ services:
   cdc-data-exporter:
     depends_on:
       - cosmosdb
+      - storage-account
       - es01
     container_name: cdc-data-exporter
     restart: always
@@ -96,6 +97,23 @@ services:
     env_file:
       - ./cdc-data-exporter/.dockerenv
     command: ["yarn", "start"]
+    networks:
+      - poc-be
+  
+  load-test:
+    depends_on:
+      - cosmosdb
+      - storage-account
+      - es01
+      - cdc-data-exporter
+      - data-importer
+    container_name: load-test
+    build:
+      context: ./load-test
+      dockerfile: Dockerfile
+    env_file:
+      - ./load-test/.dockerenv
+    command: run /dist/bulk_document.js
     networks:
       - poc-be
 
