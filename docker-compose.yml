@@ -98,8 +98,6 @@ services:
     command: ["yarn", "start"]
     networks:
       - poc-be
-    volumes:
-      - "./cdc-data-exporter:/usr/src/app"
 
 volumes:
   certs:

@@ -1,17 +1,20 @@
 import { pipe } from "fp-ts/lib/function";
 import * as TE from "fp-ts/lib/TaskEither";
-import { Client } from "@elastic/elasticsearch";
 import { defaultLog } from "@pagopa/winston-ts";
-import { ElasticDocument, getAndIndexDocument } from "../utils/elastic";
+import { ElasticDocument } from "../utils/types";
 
 export const cdcToElasticHandler =
-  (elasticClient: Client, indexName: string) => (dbDocument: ElasticDocument) =>
+  (
+    deduplicationStrategyHandler: (
+      doc: ElasticDocument
+    ) => TE.TaskEither<Error, boolean>
+  ) =>
+  (dbDocument: ElasticDocument) =>
     pipe(
       defaultLog.taskEither.info("cdcToElasticHandler"),
       () =>
         defaultLog.taskEither.info(
-          `Calling getAndIndexDocument for index=${indexName}, dbDocument=${dbDocument}`
+          `Calling deduplicationStrategyHandler for dbDocument=${dbDocument}`
         ),
-      () => getAndIndexDocument(elasticClient, indexName, dbDocument),
-      TE.map(() => true)
+      () => deduplicationStrategyHandler(dbDocument)
     );

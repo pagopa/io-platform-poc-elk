@@ -3,7 +3,7 @@ import { defaultLog, useWinston, withConsole } from "@pagopa/winston-ts";
 import dotenv from "dotenv";
 import * as O from "fp-ts/lib/Option";
 import * as TE from "fp-ts/lib/TaskEither";
-import { pipe } from "fp-ts/lib/function";
+import { identity, pipe } from "fp-ts/lib/function";
 import {
   cosmosConnect,
   createContainerIfNotExists,
@@ -13,6 +13,15 @@ import {
 import { cdcToElasticHandler } from "./handlers/indices";
 import { createIndexIfNotExists, getElasticClient } from "./utils/elastic";
 import { changeFeedHandler } from "./handlers/changeFeed";
+import {
+  createTableIfNotExists,
+  getTableClient,
+  getTableServiceClient,
+} from "./utils/tableStorage";
+import {
+  getAndIndexDocument,
+  getAndIndexDocumentWithTableStorageDeduplication,
+} from "./handlers/indexStrategy";
 
 dotenv.config();
 useWinston(withConsole());
@@ -21,6 +30,9 @@ export const CONFIG = {
   COSMOS_ENDPOINT: process.env.COSMOS_ENDPOINT,
   COSMOS_KEY: process.env.COSMOS_KEY,
   ELASTIC_NODE: process.env.ELASTIC_NODE,
+  ENABLE_TABLE_DEDUPLICATION: "true" === process.env.ENABLE_TABLE_DEDUPLICATION,
+  ALLOW_INSECURE_CONNECTION: "true" === process.env.ALLOW_INSECURE_CONNECTION,
+  STORAGE_CONN_STRING: process.env.STORAGE_CONN_STRING,
 };
 
 const DATABASE = "ChangeFeedDB";
@@ -85,9 +97,43 @@ const main = () =>
         TE.bind("indexCreation", ({ elasticClient }) =>
           createIndexIfNotExists(elasticClient, ELASTIC_INDEX_NAME)
         ),
-        TE.chain(({ elasticClient }) =>
+        TE.bind("documentDeduplicationStrategy", ({ elasticClient }) =>
+          pipe(
+            CONFIG.ENABLE_TABLE_DEDUPLICATION,
+            O.fromPredicate(identity),
+            O.map(() =>
+              pipe(
+                getTableServiceClient(CONFIG.STORAGE_CONN_STRING, {
+                  allowInsecureConnection: CONFIG.ALLOW_INSECURE_CONNECTION,
+                }),
+                (serviceClient) =>
+                  createTableIfNotExists(serviceClient, ELASTIC_INDEX_NAME),
+                TE.map(() =>
+                  getTableClient(
+                    CONFIG.STORAGE_CONN_STRING,
+                    ELASTIC_INDEX_NAME,
+                    {
+                      allowInsecureConnection: CONFIG.ALLOW_INSECURE_CONNECTION,
+                    }
+                  )
+                ),
+                TE.map((tableClient) =>
+                  getAndIndexDocumentWithTableStorageDeduplication(
+                    elasticClient,
+                    tableClient,
+                    ELASTIC_INDEX_NAME
+                  )
+                )
+              )
+            ),
+            O.getOrElse(() =>
+              TE.of(getAndIndexDocument(elasticClient, ELASTIC_INDEX_NAME))
+            )
+          )
+        ),
+        TE.chain(({ documentDeduplicationStrategy }) =>
           changeFeedProcessor(
-            cdcToElasticHandler(elasticClient, ELASTIC_INDEX_NAME)
+            cdcToElasticHandler(documentDeduplicationStrategy)
           )
         )
       )
