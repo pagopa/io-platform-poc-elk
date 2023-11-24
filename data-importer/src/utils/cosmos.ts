@@ -1,16 +1,42 @@
 import { Container, CosmosClient, Database } from "@azure/cosmos";
 import * as TE from "fp-ts/TaskEither";
 import * as E from "fp-ts/Either";
-import { constVoid, pipe } from "fp-ts/lib/function";
+import * as O from "fp-ts/Option";
+import { constVoid, flow, pipe } from "fp-ts/lib/function";
+import { ICosmosDocument } from "./types";
 
-export const upsertDocument = (
+export const upsertDocument = <T extends { readonly id: string }>(
   container: Container,
-  payload: unknown
+  payload: T
 ): TE.TaskEither<Error, void> =>
   pipe(
-    TE.tryCatch(
-      () => container.items.upsert(payload),
-      (reason) => new Error(`Impossible to Upser document: " ${String(reason)}`)
+    TE.tryCatch(() => container.item(payload.id, payload.id).read(), E.toError),
+    TE.chain(
+      flow(
+        TE.fromPredicate(
+          (response) => response.statusCode !== 404,
+          () => Error(`Item not found`)
+        ),
+        TE.map((response) =>
+          pipe(
+            O.some(response.resource as ICosmosDocument),
+            O.map((dbitem) => ({
+              ...dbitem,
+              ...payload,
+              version: dbitem.version + 1,
+            }))
+          )
+        ),
+        TE.orElse(() => TE.right(O.none)),
+        TE.map(O.getOrElse(() => ({ ...payload, version: 0 })))
+      )
+    ),
+    TE.chain((toUpsert) =>
+      TE.tryCatch(
+        () => container.items.upsert(toUpsert),
+        (reason) =>
+          new Error(`Impossible to Upsert document: " ${String(reason)}`)
+      )
     ),
     TE.map(constVoid)
   );

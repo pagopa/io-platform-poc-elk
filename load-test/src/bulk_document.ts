@@ -69,21 +69,21 @@ export default function() {
         )
       )
     ),
-    // () =>
-    //   oddsDocuments.map(oddDocument =>
-    //     pipe(
-    //       http.put(url, JSON.stringify(oddDocument), {
-    //         ...params,
-    //         tags: { api: "upsertDocument" }
-    //       }),
-    //       res =>
-    //         check(
-    //           res,
-    //           { "upsertDocument status was 200": r => r.status === 200 },
-    //           { tags: JSON.stringify({ api: "upsertDocument" }) }
-    //         )
-    //     )
-    //   ),
+    () =>
+      oddsDocuments.map(oddDocument =>
+        pipe(
+          http.post(url, JSON.stringify(oddDocument), {
+            ...params,
+            tags: { api: "upsertDocument" }
+          }),
+          res =>
+            check(
+              res,
+              { "upsertDocument status was 200": r => r.status === 200 },
+              { tags: JSON.stringify({ api: "upsertDocument" }) }
+            )
+        )
+      ),
     () => sleep(2)
   );
 }
