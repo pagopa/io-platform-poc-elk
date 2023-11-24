@@ -79,8 +79,6 @@ services:
     command: ["yarn", "start"]
     networks:
       - poc-be
-    volumes:
-      - "./data-importer:/usr/src/app"
 
   cdc-data-exporter:
     depends_on:
